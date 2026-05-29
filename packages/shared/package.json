@@ -1,0 +1,18 @@
+{
+  "name": "@elitutor/shared",
+  "version": "1.0.0",
+  "description": "Shared integrations for EliTutor — LLM, TTS, Storage, Email, WhatsApp, Push",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint \"src/**/*.ts\" --fix"
+  },
+  "dependencies": {
+    "web-push": "3.6.7"
+  },
+  "devDependencies": {
+    "@types/web-push": "3.6.4",
+    "typescript": "5.4.5"
+  }
+}

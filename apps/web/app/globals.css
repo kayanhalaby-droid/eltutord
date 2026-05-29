@@ -1,0 +1,65 @@
+@import '../styles/design-system.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 230 60% 20%;
+    --card: 0 0% 100%;
+    --card-foreground: 230 60% 20%;
+    --primary: 232 58% 23%;      /* #1A1F5E */
+    --primary-foreground: 48 100% 50%; /* #FFD700 */
+    --secondary: 232 40% 96%;
+    --secondary-foreground: 232 58% 23%;
+    --muted: 232 20% 95%;
+    --muted-foreground: 230 15% 50%;
+    --accent: 48 100% 50%;       /* gold */
+    --accent-foreground: 232 58% 23%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 232 20% 88%;
+    --input: 232 20% 88%;
+    --ring: 232 58% 23%;
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-cairo;
+    direction: rtl;
+  }
+}
+
+/* Smooth transitions */
+* {
+  transition-property: color, background-color, border-color, box-shadow;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
+}
+
+/* ── Mobile responsiveness ─────────────────────────────────── */
+/* Prevent font scaling on iOS */
+@media (max-width: 430px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Minimum touch target size */
+button, a, [role='button'] {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* iPad two-column sidebar */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .tablet-sidebar {
+    width: 240px;
+  }
+}

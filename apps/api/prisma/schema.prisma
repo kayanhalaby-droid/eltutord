@@ -1,0 +1,774 @@
+// EliTutor — الموجه الذكي — Complete Prisma Schema
+// Section B: PostgreSQL Database
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Enums
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  STUDENT
+  PARENT
+  ADMIN
+  TEACHER
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE
+  TRUE_FALSE
+  FILL_IN_THE_BLANK
+  MATCHING
+  ORDERING
+  SHORT_ANSWER
+  CODE_SNIPPET
+}
+
+enum ProgressStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum AchievementType {
+  GENERAL
+  SUBJECT_MASTERY
+  STREAK
+  COMPLETION
+  SOCIAL
+}
+
+enum HomeworkStatus {
+  ASSIGNED
+  IN_PROGRESS
+  SUBMITTED
+  GRADED
+  REVISION_REQUESTED
+}
+
+enum LeagueMemberRole {
+  MEMBER
+  ADMIN
+}
+
+// Cardcom subscription enums (Override #1 — replaces Stripe)
+enum Plan {
+  BASIC
+  ELITE
+  VIP
+}
+
+enum SubStatus {
+  ACTIVE
+  CANCELLED
+  EXPIRED
+  PENDING
+}
+
+enum BillingCycle {
+  MONTHLY
+  YEARLY
+}
+
+enum LessonType {
+  REGULAR
+  PLACEMENT_TEST
+}
+
+enum UserProgressStatus {
+  LOCKED
+  UNLOCKED
+  IN_PROGRESS
+  COMPLETED
+}
+
+// Section G — Notifications enum
+enum NotificationType {
+  ACHIEVEMENT_UNLOCKED
+  WEEKLY_REPORT_READY
+  NEW_ASSIGNMENT
+  ASSIGNMENT_REMINDER
+  PARENT_MESSAGE
+  PAYMENT_DUE
+  PAYMENT_CONFIRMATION
+  SUBSCRIPTION_EXPIRED
+  ADMIN_MESSAGE
+  STREAK_WARNING
+  DAILY_REMINDER
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Core User & Auth Models
+// ─────────────────────────────────────────────────────────────────────────────
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  phone        String?   @unique
+  passwordHash String
+  firstName    String?
+  lastName     String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  role         UserRole  @default(STUDENT)
+  isVerified   Boolean   @default(false)
+  lastLogin    DateTime?
+
+  // Gamification — Hearts
+  hearts                   Int       @default(5)
+  maxHearts                Int       @default(5)
+  lastHeartRegenerationAt  DateTime  @default(now())
+
+  // Gamification — Streaks
+  currentStreak    Int       @default(0)
+  longestStreak    Int       @default(0)
+  lastActivityDate DateTime?
+  streakFreezes    Int       @default(0)
+
+  // Gamification — XP & Level
+  totalXp          Int      @default(0)
+  weeklyXp         Int      @default(0)
+  lastWeeklyXpReset DateTime @default(now())
+  level            Int      @default(1)
+
+  // Gamification — Gems & League
+  gemsBalance Int    @default(0)
+  league      String @default("Bronze")
+  leagueRank  Int    @default(0)
+
+  // Relations
+  accounts             Account[]
+  homeworkSubmissions  HomeworkSubmission[]
+  sessions             Session[]
+  studentProfile       StudentProfile?
+  parentProfile        ParentProfile?
+  achievements         UserAchievement[]
+  weeklyXpRecords      WeeklyXpRecord[]
+  notifications        Notification[]
+  leagueGroupMembers   LeagueGroupMember[]
+  subscription         Subscription?
+  refreshTokens        RefreshToken[]
+  verificationTokens   VerificationToken[]
+  passwordResetTokens  PasswordResetToken[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String   @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refreshToken      String?
+  accessToken       String?
+  expiresAt         Int?
+  tokenType         String?
+  scope             String?
+  idToken           String?
+  sessionState      String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Profile Models
+// ─────────────────────────────────────────────────────────────────────────────
+
+model StudentProfile {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  firstName       String
+  lastName        String
+  dateOfBirth     DateTime
+  gradeLevel      Int
+  schoolName      String?
+  parentCode      String?   @unique
+  parentProfileId String?
+  xp              Int       @default(0)
+  streak          Int       @default(0)
+  gems            Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  user                User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parentProfile       ParentProfile? @relation("ParentToStudent", fields: [parentProfileId], references: [id], onDelete: SetNull)
+  lessonProgresses    LessonProgress[]
+  studySchedules      StudySchedule[]
+  homeworkSessions    HomeworkSession[]
+  parentRewards       ParentReward[]
+
+  @@map("student_profiles")
+}
+
+model ParentProfile {
+  id          String  @id @default(cuid())
+  userId      String  @unique
+  firstName   String
+  lastName    String
+  phoneNumber String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  children      StudentProfile[] @relation("ParentToStudent")
+  parentRewards ParentReward[]
+  pushTokens    PushToken[]
+
+  @@map("parent_profiles")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Payment / Subscription — Cardcom (Override #1 — NOT Stripe)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Subscription {
+  id                   String      @id @default(cuid())
+  userId               String      @unique
+  plan                 Plan        @default(BASIC)
+  status               SubStatus   @default(PENDING)
+  billingCycle         BillingCycle @default(MONTHLY)
+  cardcomTransactionId String?
+  cardcomToken         String?
+  cardcomTokenExpiry   String?
+  amount               Float?
+  startedAt            DateTime    @default(now())
+  expiresAt            DateTime?
+  cancelledAt          DateTime?
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Educational Content Structure — Subject → Section → Unit → Level → Lesson → Question
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Subject {
+  id           String   @id @default(cuid())
+  nameEn       String   @unique
+  nameAr       String   @unique
+  description  String?
+  iconUrl      String?
+  curriculumId String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  curriculum     Curriculum?     @relation(fields: [curriculumId], references: [id], onDelete: SetNull)
+  sections       Section[]
+  grades         Grade[]
+  studySchedules StudySchedule[]
+
+  @@map("subjects")
+}
+
+model Section {
+  id          String   @id @default(cuid())
+  subjectId   String
+  nameEn      String
+  nameAr      String
+  description String?
+  gradeLevel  Int
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  units   Unit[]
+
+  @@unique([subjectId, nameEn])
+  @@unique([subjectId, nameAr])
+  @@unique([subjectId, gradeLevel])
+  @@map("sections")
+}
+
+model Unit {
+  id          String   @id @default(cuid())
+  sectionId   String
+  nameEn      String
+  nameAr      String
+  description String?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  section Section @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  levels  Level[]
+
+  @@unique([sectionId, nameEn])
+  @@unique([sectionId, nameAr])
+  @@map("units")
+}
+
+model Level {
+  id          String   @id @default(cuid())
+  unitId      String
+  nameEn      String
+  nameAr      String
+  description String?
+  levelNumber Int
+  xpReward    Int      @default(10)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  unit    Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  lessons Lesson[]
+
+  @@unique([unitId, levelNumber])
+  @@unique([unitId, nameEn])
+  @@unique([unitId, nameAr])
+  @@map("levels")
+}
+
+model Lesson {
+  id          String      @id @default(cuid())
+  levelId     String
+  nameEn      String
+  nameAr      String
+  description String?
+  order       Int         @default(0)
+  durationMin Int         @default(5)
+  type        LessonType  @default(REGULAR)
+  gradeId     String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  level               Level               @relation(fields: [levelId], references: [id], onDelete: Cascade)
+  grade               Grade?              @relation(fields: [gradeId], references: [id], onDelete: SetNull)
+  questions           Question[]
+  lessonProgresses    LessonProgress[]
+  homeworkSessions    HomeworkSession[]
+  learningPathNode    LearningPathNode?
+  userProgress        UserProgress[]
+  placementTestAttempts PlacementTestAttempt[]
+
+  @@unique([levelId, nameEn])
+  @@unique([levelId, nameAr])
+  @@map("lessons")
+}
+
+model Question {
+  id            String       @id @default(cuid())
+  lessonId      String
+  type          QuestionType
+  content       Json
+  correctAnswer Json
+  explanation   String?
+  difficulty    Int          @default(1)
+  order         Int          @default(0)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@map("questions")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Progress & Gamification
+// ─────────────────────────────────────────────────────────────────────────────
+
+model LessonProgress {
+  id          String         @id @default(cuid())
+  studentId   String
+  lessonId    String
+  status      ProgressStatus @default(NOT_STARTED)
+  score       Int?
+  completedAt DateTime?
+  startedAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  student StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  lesson  Lesson         @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, lessonId])
+  @@map("lesson_progresses")
+}
+
+model Achievement {
+  id            String          @id @default(cuid())
+  nameEn        String          @unique
+  nameAr        String          @unique
+  descriptionEn String
+  descriptionAr String
+  iconUrl       String?
+  xpReward      Int             @default(0)
+  gemsReward    Int             @default(0)
+  type          AchievementType @default(GENERAL)
+  condition     Json?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  userAchievements UserAchievement[]
+
+  @@map("achievements")
+}
+
+model UserAchievement {
+  id            String   @id @default(cuid())
+  userId        String
+  achievementId String
+  earnedAt      DateTime @default(now())
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@map("user_achievements")
+}
+
+model WeeklyXpRecord {
+  id        String   @id @default(cuid())
+  userId    String
+  weekStart DateTime
+  xpEarned  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, weekStart])
+  @@map("weekly_xp_records")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Parent–Student Interaction
+// ─────────────────────────────────────────────────────────────────────────────
+
+model ParentReward {
+  id            String    @id @default(cuid())
+  parentId      String
+  studentId     String
+  titleEn       String
+  titleAr       String
+  descriptionEn String?
+  descriptionAr String?
+  targetXp      Int
+  isAchieved    Boolean   @default(false)
+  achievedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  parent  ParentProfile  @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  student StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@map("parent_rewards")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Scheduling & Homework
+// ─────────────────────────────────────────────────────────────────────────────
+
+model StudySchedule {
+  id         String   @id @default(cuid())
+  studentId  String
+  dayOfWeek  Int
+  startTime  String
+  endTime    String
+  subjectId  String?
+  notes      String?
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  student StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subject Subject?       @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+
+  @@map("study_schedules")
+}
+
+model HomeworkSession {
+  id            String         @id @default(cuid())
+  studentId     String
+  lessonId      String?
+  titleEn       String
+  titleAr       String
+  descriptionEn String?
+  descriptionAr String?
+  dueDate       DateTime
+  submittedDate DateTime?
+  status        HomeworkStatus @default(ASSIGNED)
+  grade         Int?
+  feedback      String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  student          StudentProfile    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  lesson           Lesson?           @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+  homeworkScanUsages HomeworkScanUsage[]
+
+  @@map("homework_sessions")
+}
+
+model HomeworkScanUsage {
+  id                String    @id @default(cuid())
+  homeworkSessionId String
+  scanImageUrl      String
+  scanTimestamp     DateTime  @default(now())
+  isProcessed       Boolean   @default(false)
+  processedAt       DateTime?
+  aiResponse        String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  homeworkSession HomeworkSession @relation(fields: [homeworkSessionId], references: [id], onDelete: Cascade)
+
+  @@map("homework_scan_usages")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Notifications & Social
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType @default(ADMIN_MESSAGE)
+  titleAr   String
+  messageAr String
+  isRead    Boolean          @default(false)
+  link      String?
+  metadata  Json?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model PushToken {
+  id            String        @id @default(cuid())
+  parentId      String
+  endpoint      String        @unique
+  p256dh        String
+  auth          String
+  createdAt     DateTime      @default(now())
+
+  parent ParentProfile @relation(fields: [parentId], references: [id], onDelete: Cascade)
+
+  @@map("push_tokens")
+}
+
+model LeagueGroup {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members LeagueGroupMember[]
+
+  @@map("league_groups")
+}
+
+model LeagueGroupMember {
+  id            String           @id @default(cuid())
+  userId        String
+  leagueGroupId String
+  joinedAt      DateTime         @default(now())
+  role          LeagueMemberRole @default(MEMBER)
+  currentXp     Int              @default(0)
+  lastActive    DateTime         @default(now())
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  leagueGroup  LeagueGroup  @relation(fields: [leagueGroupId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, leagueGroupId])
+  @@map("league_group_members")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Curriculum & Learning Path (Section D)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Curriculum {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  subjects Subject[]
+
+  @@map("curricula")
+}
+
+model Grade {
+  id        String   @id @default(cuid())
+  level     Int
+  subjectId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subject Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  lessons Lesson[]
+
+  @@unique([level, subjectId])
+  @@map("grades")
+}
+
+model LearningPathNode {
+  id             String   @id @default(cuid())
+  lessonId       String   @unique
+  snakePathOrder Int?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@map("learning_path_nodes")
+}
+
+model UserProgress {
+  id           String             @id @default(cuid())
+  userId       String
+  lessonId     String
+  status       UserProgressStatus @default(LOCKED)
+  score        Int?
+  lastAccessed DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime           @default(now())
+
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@map("user_progress")
+}
+
+model PlacementTestAttempt {
+  id               String   @id @default(cuid())
+  userId           String
+  lessonId         String
+  questions        Json
+  answers          Json
+  results          Json
+  difficultyLevel  Int
+  consecutiveWrong Int      @default(0)
+  isCompleted      Boolean  @default(false)
+  score            Int?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@map("placement_test_attempts")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Auth Tokens (Section C)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model VerificationToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("verification_tokens")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AI Integration (Section F)
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum AiProcessingStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model PreWrittenExplanation {
+  id         String   @id @default(cuid())
+  concept    String
+  subject    String
+  gradeLevel Int
+  language   String
+  content    String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([concept, subject, gradeLevel, language])
+  @@index([concept, subject, gradeLevel, language])
+  @@map("pre_written_explanations")
+}
+
+model HomeworkSubmission {
+  id               String             @id @default(cuid())
+  userId           String
+  imageUrl         String
+  originalFileName String
+  mimeType         String
+  status           AiProcessingStatus @default(PENDING)
+  processingLog    String?
+  parsedData       Json?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@map("homework_submissions")
+}
