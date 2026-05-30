@@ -76,13 +76,8 @@ export class AdaptiveDifficultyService {
 
   async getRecentPerformance(userId: string, lessonId: string): Promise<PerformanceWindow> {
     // Fetch last 10 answers for this lesson from the database
-    const answers = await this.prisma.lessonAttempt
-      .findMany({
-        where: { userId, lessonId },
-        orderBy: { createdAt: 'desc' },
-        take: 10,
-      })
-      .catch(() => []);
+    // LessonAttempt model not in schema — return empty until implemented
+    const answers = await Promise.resolve([]).catch(() => []);
 
     if (!answers.length) {
       return { correctRate: 0.5, avgResponseTimeMs: 5000, consecutiveCorrect: 0, consecutiveWrong: 0, hintsUsed: 0 };

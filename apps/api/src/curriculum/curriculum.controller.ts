@@ -4,15 +4,18 @@ import {
   Post,
   Param,
   Body,
+  Query,
   UseGuards,
   Req,
   NotFoundException,
   InternalServerErrorException,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { CurriculumService } from './curriculum.service';
 import { LearningPathService } from '../learning-path/learning-path.service';
 import { ImageGeneratorService } from './image-generator.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { Public } from '../common/decorators/public.decorator';
 import { SubjectDto } from './dto/subject.dto';
 import { GradeDto } from './dto/grade.dto';
 import { LessonDto } from './dto/lesson.dto';
@@ -25,6 +28,28 @@ export class CurriculumController {
     private readonly learningPathService: LearningPathService,
     private readonly imageGeneratorService: ImageGeneratorService,
   ) {}
+
+  @Public()
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  @Get('onboarding-questions')
+  async getOnboardingQuestions(
+    @Query('subject') subject: string,
+    @Query('grade') grade: string,
+  ) {
+    const gradeLevel = parseInt(grade, 10) || 1;
+    return this.curriculumService.getOnboardingQuestions(subject ?? '', gradeLevel);
+  }
+
+  @Public()
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  @Get('onboarding-questions/placement')
+  async getPlacementQuestions(
+    @Query('subject') subject: string,
+    @Query('grade') grade: string,
+  ) {
+    const gradeLevel = parseInt(grade, 10) || 1;
+    return this.curriculumService.getPlacementQuestions(subject ?? '', gradeLevel);
+  }
 
   @Get('subjects/visuals')
   getSubjectVisuals() {

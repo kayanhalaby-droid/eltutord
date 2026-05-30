@@ -189,6 +189,21 @@ export default function ProfilePage() {
           </div>
         </div>
 
+        {/* Avatar customization shortcut */}
+        <Link
+          href="/profile/avatar"
+          className="flex items-center justify-between bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition-all border border-gray-100 group"
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-3xl">🦉</span>
+            <div>
+              <p className="font-extrabold text-[#1A1F5E] text-sm">تخصيص نور</p>
+              <p className="text-xs text-gray-400">اشترِ قبعات وإكسسوارات لبومتك</p>
+            </div>
+          </div>
+          <ChevronLeft size={18} className="text-gray-400 group-hover:text-[#1A1F5E] transition-colors" />
+        </Link>
+
         {/* Logout (desktop) */}
         <button
           onClick={() => setShowLogoutConfirm(true)}

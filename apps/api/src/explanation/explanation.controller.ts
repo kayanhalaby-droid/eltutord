@@ -1,9 +1,10 @@
 import { Controller, Get, Query, BadRequestException, UseGuards } from '@nestjs/common';
 import { ExplanationService } from './explanation.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PremiumGuard } from '../auth/guards/premium.guard';
 
 @Controller('explanation')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PremiumGuard)
 export class ExplanationController {
   constructor(private readonly explanationService: ExplanationService) {}
 

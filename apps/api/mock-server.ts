@@ -815,6 +815,74 @@ function buildLearningPath(subjectId: string, gradeLevel: number) {
   return { id: `${subjectId}-${gradeLevel}-path`, subjectName, gradeLevel, nodes };
 }
 
+// ── Onboarding Questions Builder ──────────────────────────────────
+function buildOnboardingQuestions(subject: string, grade: number, count: number) {
+  const BANK: Record<string, Array<{ q: string; opts: string[]; correct: number }>> = {
+    'عربي': [
+      { q: 'ما مفرد كلمة "كتب"؟', opts: ['كتاب', 'مكتبة', 'كاتب', 'كتابة'], correct: 0 },
+      { q: 'أي الجمل صحيحة نحوياً؟', opts: ['ذهبت إلى المدرسة', 'ذهب إلى المدرسة أنا', 'أنا ذهب المدرسة', 'ذهبنا هم'], correct: 0 },
+      { q: '"الشمس تشرق من الشرق" — هذه الجملة صحيحة؟', opts: ['صحيح', 'خطأ'], correct: 0 },
+      { q: 'ما معنى "الفصاحة"؟', opts: ['البلاغة في الكلام', 'قصر الكلام', 'كثرة الكتابة', 'حسن الصوت'], correct: 0 },
+      { q: 'أكمل: "العلم في الصغر كالنقش ..."', opts: ['في الحجر', 'في الورق', 'في الخشب', 'في الرمل'], correct: 0 },
+      { q: 'ما جمع "قلم"؟', opts: ['أقلام', 'قلوم', 'قلمون', 'قلمات'], correct: 0 },
+      { q: '"المعلم يشرح الدرس" — من يقوم بالفعل؟', opts: ['المعلم', 'الدرس', 'الشرح', 'الفصل'], correct: 0 },
+    ],
+    'עברית': [
+      { q: 'מה הפועל בזמן עתיד של "כתב"?', opts: ['יכתוב', 'כתב', 'כותב', 'נכתב'], correct: 0 },
+      { q: 'איך אומרים "ספר" ברבים?', opts: ['ספרים', 'ספרות', 'ספרן', 'ספריה'], correct: 0 },
+      { q: '"הכלב רץ" — זו משפט נכון?', opts: ['כן', 'לא'], correct: 0 },
+      { q: 'מה השורש של המילה "כותב"?', opts: ['כ-ת-ב', 'כ-ו-ב', 'כ-ב-ת', 'ת-כ-ב'], correct: 0 },
+      { q: 'מה פירוש "עגול"?', opts: ['עיגול', 'ריבוע', 'משולש', 'מלבן'], correct: 0 },
+      { q: 'איך כותבים: "הוא _____ לבית הספר"?', opts: ['הלך', 'הולכת', 'הלכה', 'ילכו'], correct: 0 },
+      { q: '"חצי" שווה ל...', opts: ['0.5', '0.25', '2', '1'], correct: 0 },
+    ],
+    'رياضيات': [
+      { q: `${grade + 3} × ${grade + 2} = ?`, opts: [`${(grade+3)*(grade+2)}`, `${(grade+3)*(grade+2)+1}`, `${(grade+3)*(grade+2)-1}`, `${(grade+3)*(grade+2)+2}`], correct: 0 },
+      { q: `${grade * 10 + 5} ÷ 5 = ?`, opts: [`${(grade * 10 + 5) / 5}`, `${Math.floor((grade * 10 + 5) / 5) + 1}`, `${Math.floor((grade * 10 + 5) / 5) - 1}`, `${Math.floor((grade * 10 + 5) / 5) + 2}`], correct: 0 },
+      { q: 'ما عدد أضلاع المربع؟', opts: ['4', '3', '6', '5'], correct: 0 },
+      { q: `${grade + 7} + ${grade + 8} = ?`, opts: [`${(grade+7)+(grade+8)}`, `${(grade+7)+(grade+8)+1}`, `${(grade+7)+(grade+8)-1}`, `${(grade+7)+(grade+8)+2}`], correct: 0 },
+      { q: 'الكسر ½ يساوي...', opts: ['0.5', '0.25', '2', '1'], correct: 0 },
+      { q: 'ما قيمة π تقريباً؟', opts: ['3.14', '2.71', '1.41', '3.00'], correct: 0 },
+      { q: `${grade * 5} - ${grade * 2} = ?`, opts: [`${grade * 5 - grade * 2}`, `${grade * 5 - grade * 2 + 1}`, `${grade * 5 - grade * 2 - 1}`, `${grade * 3 + 1}`], correct: 0 },
+    ],
+    'English': [
+      { q: 'What is the plural of "child"?', opts: ['children', 'childs', 'childrens', 'child'], correct: 0 },
+      { q: 'Choose the correct form: "She ___ to school every day."', opts: ['goes', 'go', 'going', 'went'], correct: 0 },
+      { q: '"The cat is on the mat." Is this sentence correct?', opts: ['Yes', 'No'], correct: 0 },
+      { q: 'What is the past tense of "run"?', opts: ['ran', 'runned', 'runs', 'running'], correct: 0 },
+      { q: 'Which word means "happy"?', opts: ['joyful', 'sad', 'angry', 'tired'], correct: 0 },
+      { q: 'Complete: "I ___ a student."', opts: ['am', 'is', 'are', 'be'], correct: 0 },
+      { q: 'What is the opposite of "hot"?', opts: ['cold', 'warm', 'cool', 'chilly'], correct: 0 },
+    ],
+  };
+
+  const bank = BANK[subject] ?? BANK['عربي'];
+  return bank.slice(0, count).map((item, i) => {
+    const isTrueFalse = item.opts.length === 2 && (item.opts[0] === 'صحيح' || item.opts[0] === 'כן' || item.opts[0] === 'Yes');
+    if (isTrueFalse) {
+      return {
+        id: `onb-${subject}-${grade}-${i}`,
+        type: 'TRUE_FALSE',
+        content: { statement: item.q },
+        correctAnswer: { isTrue: item.correct === 0 },
+        difficulty: Math.min(Math.ceil(grade / 4), 3),
+        order: i + 1,
+      };
+    }
+    return {
+      id: `onb-${subject}-${grade}-${i}`,
+      type: 'MULTIPLE_CHOICE',
+      content: {
+        questionText: item.q,
+        options: item.opts.map((text, j) => ({ id: String.fromCharCode(97 + j), text })),
+      },
+      correctAnswer: { selectedOptionIds: [String.fromCharCode(97 + item.correct)] },
+      difficulty: Math.min(Math.ceil(grade / 4), 3),
+      order: i + 1,
+    };
+  });
+}
+
 // ── Simple Router ─────────────────────────────────────────────────
 type Handler = (params: Record<string, string>, body: any, query: Record<string, string>) => [number, any] | Promise<[number, any]>;
 
@@ -848,7 +916,26 @@ const ROUTES = [
     return [200, { access_token: 'mock-dev-token-2025', user }];
   }),
   route('POST', '/auth/register', (_, body) => [201, { access_token: 'mock-dev-token-2025', user: { ...FAKE_USER, ...body } }]),
+  route('POST', '/auth/register-with-onboarding', (_, body) => [201, {
+    access_token: 'mock-dev-token-2025',
+    refresh_token: 'mock-refresh-token-2025',
+    user: { id: 'mock-u-' + Date.now(), firstName: body?.firstName ?? 'طالب', lastName: body?.lastName ?? '', phone: body?.phone ?? '', role: 'STUDENT', gradeLevel: body?.gradeLevel ?? 3 },
+  }]),
   route('POST', '/auth/logout', () => [200, { success: true }]),
+
+  // ── Onboarding Questions ──────────────────────────────────────
+  route('GET', '/curriculum/onboarding-questions/placement', (_p, _b, query) => {
+    const subject = query.subject ?? 'عربي';
+    const grade = parseInt(query.grade ?? '3', 10);
+    const questions = buildOnboardingQuestions(subject, grade, 5);
+    return [200, questions];
+  }),
+  route('GET', '/curriculum/onboarding-questions', (_p, _b, query) => {
+    const subject = query.subject ?? 'عربي';
+    const grade = parseInt(query.grade ?? '3', 10);
+    const questions = buildOnboardingQuestions(subject, grade, 7);
+    return [200, questions];
+  }),
 
   // ── Curriculum ────────────────────────────────────────────────
   route('GET', '/curriculum/stats', () => [200, loaderGetStats()]),
@@ -1616,6 +1703,7 @@ const ROUTES = [
 
   // ── Subscription ─────────────────────────────────────────────
   route('GET', '/api/cardcom/subscription', () => [200, { plan: 'basic', status: 'ACTIVE', expiresAt: null, billingCycle: 'MONTHLY' }]),
+  route('GET', '/api/cardcom/subscription/status', () => [200, { active: true, plan: 'BASIC', expiresAt: new Date(Date.now() + 30 * 86400000).toISOString() }]),
   route('POST', '/api/cardcom/checkout', () => [200, { paymentUrl: 'http://localhost:3000/home' }]),
   route('GET', '/api/cardcom/success', () => [200, { success: true }]),
   route('GET', '/api/cardcom/cancel', () => [200, { cancelled: true }]),

@@ -22,6 +22,7 @@ enum UserRole {
 }
 
 enum QuestionType {
+  // ── Original types (backward compatible) ──
   MULTIPLE_CHOICE
   TRUE_FALSE
   FILL_IN_THE_BLANK
@@ -29,6 +30,36 @@ enum QuestionType {
   ORDERING
   SHORT_ANSWER
   CODE_SNIPPET
+  // ── New types from q112 curriculum ──
+  REVERSE_CHOICE
+  IMAGE_CHOICE
+  IMAGE_MATCH
+  PAIR_MATCH
+  TAP_PAIRS
+  FILL_BLANK
+  FILL_BLANK_CHOICE
+  WORD_ORDER
+  DRAG_ORDER
+  TRANSLATE
+  TRANSLATE_REVERSE
+  LISTEN_WRITE
+  LISTEN_CHOICE
+  LISTEN_IMAGE
+  SPEAK
+  SPEAK_WORD
+  READ_ALOUD
+  READING_COMPREHENSION
+  SORT_GROUPS
+  FLASHCARD
+  FLASHCARD_EX
+  AI_CONVERSATION
+  ARRANGE_ALL_WORDS
+  COMPLETE_TRANSLATION
+  MARK_CORRECT_MEANING
+  WORD_BANK
+  TIMED_PRACTICE
+  SPEED_REVIEW
+  GRAMMAR_TIP
 }
 
 enum ProgressStatus {
@@ -157,7 +188,10 @@ model User {
   refreshTokens        RefreshToken[]
   verificationTokens   VerificationToken[]
   passwordResetTokens  PasswordResetToken[]
+  userAvatar           UserAvatar?
+  userInventory        UserInventory[]
 
+  @@index([lastLogin])
   @@map("users")
 }
 
@@ -205,7 +239,7 @@ model StudentProfile {
   userId          String    @unique
   firstName       String
   lastName        String
-  dateOfBirth     DateTime
+  dateOfBirth     DateTime?
   gradeLevel      Int
   schoolName      String?
   parentCode      String?   @unique
@@ -213,6 +247,7 @@ model StudentProfile {
   xp              Int       @default(0)
   streak          Int       @default(0)
   gems            Int       @default(0)
+  onboardingData  Json?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -304,9 +339,7 @@ model Section {
   subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
   units   Unit[]
 
-  @@unique([subjectId, nameEn])
-  @@unique([subjectId, nameAr])
-  @@unique([subjectId, gradeLevel])
+  @@unique([subjectId, gradeLevel, order])
   @@map("sections")
 }
 
@@ -389,6 +422,7 @@ model Question {
 
   lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 
+  @@index([lessonId, difficulty])
   @@map("questions")
 }
 
@@ -410,6 +444,7 @@ model LessonProgress {
   lesson  Lesson         @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 
   @@unique([studentId, lessonId])
+  @@index([studentId, status])
   @@map("lesson_progresses")
 }
 
@@ -683,6 +718,60 @@ model PlacementTestAttempt {
 
   @@unique([userId, lessonId])
   @@map("placement_test_attempts")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Avatar Customization (Phase 3)
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum AvatarSlot {
+  HAT
+  ACCESSORY
+  COLOR
+  BACKGROUND
+}
+
+model AvatarItem {
+  id        String     @id @default(cuid())
+  nameAr    String
+  nameEn    String
+  slot      AvatarSlot
+  emoji     String
+  cost      Int        @default(50)
+  isDefault Boolean    @default(false)
+  createdAt DateTime   @default(now())
+
+  userInventories UserInventory[]
+
+  @@map("avatar_items")
+}
+
+model UserAvatar {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  hatId       String?
+  accessoryId String?
+  colorId     String?
+  bgId        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_avatars")
+}
+
+model UserInventory {
+  id           String     @id @default(cuid())
+  userId       String
+  avatarItemId String
+  purchasedAt  DateTime   @default(now())
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  avatarItem AvatarItem @relation(fields: [avatarItemId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, avatarItemId])
+  @@map("user_inventory")
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

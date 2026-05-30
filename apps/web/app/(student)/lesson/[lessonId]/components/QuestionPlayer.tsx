@@ -29,6 +29,7 @@ import DragOrder from '@/components/exercises/arabic/grade1/DragOrder';
 import ReadingComprehension from '@/components/exercises/arabic/grade1/ReadingComprehension';
 import { Bot } from 'lucide-react';
 import NoorOwl from '@/components/NoorOwl';
+import { FeedbackPanel } from '@/components/lesson/FeedbackPanel';
 
 interface Props {
   question: QuestionDto;
@@ -563,40 +564,12 @@ export default function QuestionPlayer({ question, subject, gradeLevel, onOpenAI
       {/* ── Feedback ── */}
       <AnimatePresence>
         {isAnswered && (
-          <motion.div
-            className={`rounded-[20px] p-4 flex items-center justify-between gap-3
-              ${isCorrect
-                ? 'border-2 border-[#22C55E] bg-[#DCFCE7]'
-                : 'border-2 border-[#EF4444] bg-[#FEE2E2]'}`}
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            transition={{ type: 'spring', stiffness: 280, damping: 22 }}
-          >
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              <span className="text-2xl shrink-0">{isCorrect ? '✨' : '🧠'}</span>
-              <div className="min-w-0">
-                <p className={`font-extrabold text-sm ${isCorrect ? 'text-[#15803D]' : 'text-[#B91C1C]'}`}>
-                  {isCorrect ? 'ممتاز! إجابة صحيحة 🌟' : 'تقريباً!'}
-                </p>
-                {!isCorrect && (
-                  <p className="text-xs text-[#15803D] font-bold mt-0.5 truncate">
-                    الإجابة: {getCorrectAnswerDisplay(question) || question.explanation || ''}
-                  </p>
-                )}
-                {question.explanation && (isCorrect || getCorrectAnswerDisplay(question)) && (
-                  <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{question.explanation}</p>
-                )}
-              </div>
-            </div>
-            <button
-              onClick={handleNext}
-              className={`shrink-0 px-4 py-2.5 min-h-[44px] rounded-xl font-bold text-white text-sm transition-all hover:opacity-90 active:scale-95
-                ${isCorrect ? 'bg-[#22C55E]' : 'bg-[#EF4444]'}`}
-            >
-              التالي
-            </button>
-          </motion.div>
+          <FeedbackPanel
+            isCorrect={isCorrect}
+            correctAnswerText={getCorrectAnswerDisplay(question) || question.explanation || ''}
+            explanation={question.explanation && !isCorrect ? question.explanation : undefined}
+            onNext={handleNext}
+          />
         )}
       </AnimatePresence>
     </div>

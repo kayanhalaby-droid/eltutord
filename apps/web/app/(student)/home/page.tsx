@@ -18,6 +18,8 @@ import FlashcardsWidget from './components/FlashcardsWidget';
 import MetzavCountdown from './components/MetzavCountdown';
 import EncouragementModal from './components/EncouragementModal';
 import DailyContentWidget from './components/DailyContentWidget';
+import GuestPaywallModal from '@/components/GuestPaywallModal';
+import SubscriptionCelebrationModal from '@/components/SubscriptionCelebrationModal';
 
 interface Encouragement { id: string; message: string; gems: number; fromName: string }
 interface Subject { id: string; name: string; lessonCount?: number; masteryPercent?: number }
@@ -41,12 +43,20 @@ function StatCard({ icon, value, label }: { icon: string; value: number | string
 }
 
 export default function StudentHomePage() {
-  const { user, token } = useAuthStore();
+  const router = useRouter();
+  const { user, token, setSubscription } = useAuthStore();
   const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
   const learningPathRef = useRef<HTMLDivElement>(null);
   const [milestoneData, setMilestoneData] = useState<{ milestone: number; whatsappSent: boolean } | null>(null);
   const [streakModal, setStreakModal] = useState<'at-risk' | 'broken' | null>(null);
   const [activeEncouragement, setActiveEncouragement] = useState<Encouragement | null>(null);
+  const [guestPaywall, setGuestPaywall] = useState(false);
+  const [guestInfo, setGuestInfo] = useState<{ subject: string | null; grade: number | null; placementLevel: string; lessonsCompleted: number }>({
+    subject: null, grade: null, placementLevel: 'beginner', lessonsCompleted: 0,
+  });
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [celebrationPlan, setCelebrationPlan] = useState<string>('BASIC');
+  const [pollingSubscribed, setPollSubscribed] = useState(false);
 
   const { streakAtRisk, brokenStreak, streak } = useStreak();
   const { data: dailyGoal } = useDailyGoal();
@@ -66,6 +76,31 @@ export default function StudentHomePage() {
     enabled: !!token,
     staleTime: 30_000,
   });
+
+  // Detect post-payment redirect (?subscribed=1) and start polling
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('subscribed') === '1') {
+      setPollSubscribed(true);
+      router.replace('/home', { scroll: false });
+    }
+  }, []);
+
+  const { data: subStatus } = useQuery<{ active: boolean; plan: string | null; expiresAt: string | null }>({
+    queryKey: ['subscriptionStatus'],
+    queryFn: () => apiFetch('/api/cardcom/subscription/status', { token: token! }),
+    enabled: !!token && pollingSubscribed,
+    refetchInterval: pollingSubscribed ? 3000 : false,
+    staleTime: 0,
+  });
+
+  useEffect(() => {
+    if (!pollingSubscribed || !subStatus?.active) return;
+    setPollSubscribed(false);
+    setSubscription(true, subStatus.plan ?? null);
+    setCelebrationPlan(subStatus.plan ?? 'BASIC');
+    setShowCelebration(true);
+  }, [subStatus, pollingSubscribed]);
 
   useEffect(() => {
     const first = encouragementsData?.encouragements?.[0];
@@ -91,6 +126,26 @@ export default function StudentHomePage() {
       setStreakModal('at-risk');
     }
   }, [streakAtRisk, brokenStreak]);
+
+  useEffect(() => {
+    const isGuest = localStorage.getItem('elitutor-guest') === 'true';
+    if (!isGuest) return;
+    try {
+      const raw = localStorage.getItem('elitutor-onboarding');
+      if (!raw) return;
+      const onboarding = JSON.parse(raw);
+      const lessonsCompleted = Object.keys(onboarding.guestProgress ?? {}).length;
+      if (lessonsCompleted >= 3) {
+        setGuestInfo({
+          subject: onboarding.subject ?? null,
+          grade: onboarding.grade ?? null,
+          placementLevel: onboarding.placementLevel ?? 'beginner',
+          lessonsCompleted,
+        });
+        setGuestPaywall(true);
+      }
+    } catch { /* ignore */ }
+  }, []);
 
   const { data: subjects = [], isLoading: subjectsLoading } = useQuery<Subject[]>({
     queryKey: ['subjects'],
@@ -293,6 +348,25 @@ export default function StudentHomePage() {
           <EncouragementModal
             encouragement={activeEncouragement}
             onClose={() => setActiveEncouragement(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      {guestPaywall && (
+        <GuestPaywallModal
+          subject={guestInfo.subject}
+          grade={guestInfo.grade}
+          placementLevel={guestInfo.placementLevel}
+          lessonsCompleted={guestInfo.lessonsCompleted}
+          onRegister={() => router.push('/onboarding')}
+        />
+      )}
+
+      <AnimatePresence>
+        {showCelebration && (
+          <SubscriptionCelebrationModal
+            plan={celebrationPlan}
+            onContinue={() => setShowCelebration(false)}
           />
         )}
       </AnimatePresence>

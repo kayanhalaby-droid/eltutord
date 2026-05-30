@@ -12,6 +12,7 @@ import * as bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
 import { UserRole } from '@prisma/client';
 import { RegisterUserDto } from './dto/register-user.dto';
+import { RegisterWithOnboardingDto } from './dto/register-with-onboarding.dto';
 import { LoginUserDto } from './dto/login-user.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
@@ -67,6 +68,128 @@ export class AuthService {
       ...tokens,
       user: this.safeUser(user),
     };
+  }
+
+  async registerWithOnboarding(dto: RegisterWithOnboardingDto) {
+    const existing = await this.prisma.user.findFirst({ where: { phone: dto.phone } });
+    if (existing) throw new ConflictException('رقم الجوال مستخدم بالفعل');
+
+    const passwordHash = await bcrypt.hash(dto.password, 12);
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          phone: dto.phone,
+          email: `${dto.phone}@elitutor.local`,
+          passwordHash,
+          firstName: dto.firstName,
+          lastName: dto.lastName,
+          role: UserRole.STUDENT,
+          gemsBalance: 50,
+        },
+      });
+
+      const subject = await tx.subject.findFirst({ where: { nameAr: dto.subject } });
+
+      await tx.studentProfile.create({
+        data: {
+          userId: user.id,
+          firstName: dto.firstName,
+          lastName: dto.lastName,
+          gradeLevel: dto.gradeLevel,
+          onboardingData: {
+            subject: dto.subject,
+            motivation: dto.motivation ?? null,
+            dailyGoalMinutes: dto.dailyGoalMinutes ?? null,
+            trialScore: dto.trialScore ?? null,
+            placementLevel: dto.placementLevel ?? 'beginner',
+            registeredAt: new Date().toISOString(),
+          },
+        },
+      });
+
+      if (subject) {
+        await this.setStartingLesson(tx, user.id, subject.id, dto.gradeLevel, dto.placementLevel ?? 'beginner');
+      }
+
+      if (dto.guestProgress && Object.keys(dto.guestProgress).length > 0) {
+        await this.migrateGuestProgress(tx, user.id, dto.guestProgress);
+      }
+
+      return user;
+    });
+
+    const tokens = await this.generateTokens(result.id, result.email, result.role);
+    return {
+      ...tokens,
+      user: {
+        id: result.id,
+        firstName: result.firstName,
+        lastName: result.lastName,
+        phone: result.phone,
+        role: result.role,
+        gradeLevel: dto.gradeLevel,
+      },
+    };
+  }
+
+  private async setStartingLesson(
+    tx: Parameters<Parameters<typeof this.prisma.$transaction>[0]>[0],
+    userId: string,
+    subjectId: string,
+    gradeLevel: number,
+    placementLevel: string,
+  ): Promise<void> {
+    const startUnitOrder = placementLevel === 'advanced' ? 6
+      : placementLevel === 'intermediate' ? 3
+      : 1;
+
+    const grade = await tx.grade.findUnique({
+      where: { level_subjectId: { level: gradeLevel, subjectId } },
+      include: {
+        lessons: {
+          orderBy: { order: 'asc' },
+          take: 1,
+          skip: (startUnitOrder - 1) * 10,
+        },
+      },
+    });
+
+    if (!grade || !grade.lessons[0]) return;
+
+    await tx.userProgress.upsert({
+      where: { userId_lessonId: { userId, lessonId: grade.lessons[0].id } },
+      create: { userId, lessonId: grade.lessons[0].id, status: 'UNLOCKED' },
+      update: { status: 'UNLOCKED' },
+    });
+  }
+
+  private async migrateGuestProgress(
+    tx: Parameters<Parameters<typeof this.prisma.$transaction>[0]>[0],
+    userId: string,
+    guestProgress: Record<string, unknown>,
+  ): Promise<void> {
+    for (const [lessonId, data] of Object.entries(guestProgress)) {
+      // SECURITY: validate lessonId exists before creating progress record
+      const lesson = await tx.lesson.findUnique({ where: { id: lessonId } });
+      if (!lesson) continue;
+
+      const progressData = data as { score?: number; completedAt?: string };
+      await tx.userProgress.upsert({
+        where: { userId_lessonId: { userId, lessonId } },
+        create: {
+          userId,
+          lessonId,
+          status: 'COMPLETED',
+          score: progressData.score ?? 100,
+          completedAt: progressData.completedAt ? new Date(progressData.completedAt) : new Date(),
+        },
+        update: {
+          status: 'COMPLETED',
+          score: progressData.score ?? 100,
+        },
+      });
+    }
   }
 
   // SUPPLEMENT override: login by phone (not email)

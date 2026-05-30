@@ -15,6 +15,7 @@ export interface NoorProps {
   loop?: boolean;
   message?: string;
   onClick?: () => void;
+  onTap?: () => void;
 }
 
 const BODY_ANIMS: Record<NoorExpression, object> = {
@@ -92,7 +93,7 @@ function FloatingFx({ expression, s }: { expression: NoorExpression; s: number }
   return null;
 }
 
-export default function Noor({ expression = 'default', size = 100, animate: anim = true, loop = true, message, onClick }: NoorProps) {
+export default function Noor({ expression = 'default', size = 100, animate: anim = true, loop = true, message, onClick, onTap }: NoorProps) {
   const [msgVisible, setMsgVisible] = useState(false);
 
   useEffect(() => {
@@ -127,7 +128,7 @@ export default function Noor({ expression = 'default', size = 100, animate: anim
     : {};
 
   return (
-    <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 8 * s, cursor: onClick ? 'pointer' : 'default' }} onClick={onClick}>
+    <div data-testid="noor-body" style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 8 * s, cursor: onClick || onTap ? 'pointer' : 'default' }} onClick={() => { onClick?.(); onTap?.(); }}>
       {/* Speech bubble */}
       <AnimatePresence>
         {msgVisible && message && (

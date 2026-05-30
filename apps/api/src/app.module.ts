@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { AuthModule } from './auth/auth.module';
@@ -27,6 +28,7 @@ import { ThrottlerConfigService } from './config/throttler-config.service';
       isGlobal: true,
       envFilePath: process.env.NODE_ENV === 'test' ? '.env.test' : '.env',
     }),
+    ScheduleModule.forRoot(),
     ThrottlerModule.forRootAsync({
       useClass: ThrottlerConfigService,
     }),

@@ -4,7 +4,9 @@ import { Cairo, Noto_Sans_Arabic, Noto_Sans_Hebrew } from 'next/font/google';
 import './globals.css';
 import { QueryProvider } from '@/providers/query-provider';
 import { AuthProvider } from '@/providers/auth-provider';
+import { ThemeApplier } from '@/components/ThemeApplier';
 import { Toaster } from 'sonner';
+import Script from 'next/script';
 
 const cairo = Cairo({
   subsets: ['arabic', 'latin'],
@@ -41,14 +43,27 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       suppressHydrationWarning
       className={`${cairo.variable} ${notoArabic.variable} ${notoHebrew.variable}`}
     >
-      <body className={cairo.className}>
+      <body className={cairo.className} suppressHydrationWarning>
         <QueryProvider>
+          <ThemeApplier />
           <AuthProvider>
             {children}
           </AuthProvider>
           <Toaster position="top-center" richColors closeButton />
           <LabButton />
         </QueryProvider>
+        {/* UTM tracking — captures utm_* params on first visit */}
+        <Script id="utm-tracker" strategy="afterInteractive">{`
+          (function(){
+            try {
+              var p = new URLSearchParams(window.location.search);
+              var src = p.get('utm_source'), med = p.get('utm_medium'), cam = p.get('utm_campaign');
+              if (src || med || cam) {
+                sessionStorage.setItem('utm', JSON.stringify({ utm_source: src, utm_medium: med, utm_campaign: cam }));
+              }
+            } catch(e) {}
+          })();
+        `}</Script>
       </body>
     </html>
   );

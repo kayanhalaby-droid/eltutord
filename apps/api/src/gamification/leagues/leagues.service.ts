@@ -1,4 +1,5 @@
 ﻿import { Injectable, Logger } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../redis/redis.service';
 import { GamificationConfig } from '../../config/gamification.config';
@@ -79,6 +80,7 @@ export class LeagueService {
     return { league: user.league, rank: finalRank };
   }
 
+  @Cron('59 23 * * 0', { timeZone: 'Asia/Jerusalem' })
   async runWeeklyReset(): Promise<void> {
     this.logger.log('Starting weekly league reset...');
     const allUsers = await this.prisma.user.findMany({ select: { id: true, league: true } });

@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterUserDto } from './dto/register-user.dto';
+import { RegisterWithOnboardingDto } from './dto/register-with-onboarding.dto';
 import { LoginUserDto } from './dto/login-user.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
@@ -30,6 +31,12 @@ export class AuthController {
   @Post('register')
   register(@Body() dto: RegisterUserDto) {
     return this.authService.register(dto);
+  }
+
+  @Post('register-with-onboarding')
+  @HttpCode(HttpStatus.CREATED)
+  registerWithOnboarding(@Body() dto: RegisterWithOnboardingDto) {
+    return this.authService.registerWithOnboarding(dto);
   }
 
   @Post('login')

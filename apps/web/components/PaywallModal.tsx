@@ -10,6 +10,7 @@ interface Props {
   trigger: PaywallTrigger;
   onClose: () => void;
   onContinueGuest?: () => void;
+  isDismissible?: boolean;
 }
 
 const TRIGGER_COPY: Record<PaywallTrigger, { title: string; body: string; icon: string }> = {
@@ -35,7 +36,7 @@ const TRIGGER_COPY: Record<PaywallTrigger, { title: string; body: string; icon: 
   },
 };
 
-export default function PaywallModal({ trigger, onClose, onContinueGuest }: Props) {
+export default function PaywallModal({ trigger, onClose, onContinueGuest, isDismissible = true }: Props) {
   const router = useRouter();
   const copy = TRIGGER_COPY[trigger];
 
@@ -74,7 +75,7 @@ export default function PaywallModal({ trigger, onClose, onContinueGuest }: Prop
           whileTap={{ scale: 0.97 }}
           onClick={() => router.push('/subscription')}
         >
-          اشترك الآن — ١٩٩ ₪/شهر
+          اشترك الآن — ٩٥ ₪/شهر فقط
         </motion.button>
 
         {onContinueGuest && (
@@ -86,12 +87,14 @@ export default function PaywallModal({ trigger, onClose, onContinueGuest }: Prop
           </button>
         )}
 
-        <button
-          className="text-xs text-gray-400"
-          onClick={onClose}
-        >
-          إغلاق
-        </button>
+        {isDismissible && (
+          <button
+            className="text-xs text-gray-400"
+            onClick={onClose}
+          >
+            إغلاق
+          </button>
+        )}
       </motion.div>
     </motion.div>
   );

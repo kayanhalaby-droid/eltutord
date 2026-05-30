@@ -1,0 +1,141 @@
+import type { Locale } from '@/store/settings';
+
+type TranslationKey =
+  | 'home' | 'lessons' | 'achievements' | 'shop' | 'league' | 'profile'
+  | 'streak' | 'hearts' | 'gems' | 'xp' | 'settings' | 'logout'
+  | 'darkMode' | 'dyslexicFont' | 'muteMascot' | 'language'
+  | 'dailyGoal' | 'quests' | 'notifications' | 'back' | 'next'
+  | 'correct' | 'wrong' | 'tryAgain' | 'wellDone' | 'loading'
+  | 'myChildren' | 'weeklyReport' | 'progress' | 'encourage'
+  | 'print' | 'focusMode' | 'privacy' | 'terms'
+  | 'buyNow' | 'premium' | 'freeTier';
+
+export type { TranslationKey };
+
+export const TRANSLATIONS: Record<Locale, Record<TranslationKey, string>> = {
+  ar: {
+    home: 'الرئيسية',
+    lessons: 'الدروس',
+    achievements: 'الإنجازات',
+    shop: 'المتجر',
+    league: 'الدوري',
+    profile: 'الملف الشخصي',
+    streak: 'السلسلة',
+    hearts: 'القلوب',
+    gems: 'الجواهر',
+    xp: 'نقاط الخبرة',
+    settings: 'الإعدادات',
+    logout: 'تسجيل الخروج',
+    darkMode: 'الوضع الليلي',
+    dyslexicFont: 'خط الديسلكسيا',
+    muteMascot: 'كتم البومة',
+    language: 'اللغة',
+    dailyGoal: 'الهدف اليومي',
+    quests: 'المهام',
+    notifications: 'الإشعارات',
+    back: 'رجوع',
+    next: 'التالي',
+    correct: 'صحيح! ✅',
+    wrong: 'خطأ ❌',
+    tryAgain: 'حاول مجدداً',
+    wellDone: 'أحسنت! 🌟',
+    loading: 'جاري التحميل...',
+    myChildren: 'أبنائي',
+    weeklyReport: 'التقرير الأسبوعي',
+    progress: 'التقدم',
+    encourage: 'أرسل تشجيع',
+    print: 'طباعة',
+    focusMode: 'وضع التركيز',
+    privacy: 'سياسة الخصوصية',
+    terms: 'شروط الاستخدام',
+    buyNow: 'اشترك الآن',
+    premium: 'المميز',
+    freeTier: 'المجاني',
+  },
+  he: {
+    home: 'בית',
+    lessons: 'שיעורים',
+    achievements: 'הישגים',
+    shop: 'חנות',
+    league: 'ליגה',
+    profile: 'פרופיל',
+    streak: 'רצף',
+    hearts: 'לבבות',
+    gems: 'אבנים יקרות',
+    xp: 'נקודות ניסיון',
+    settings: 'הגדרות',
+    logout: 'התנתקות',
+    darkMode: 'מצב לילה',
+    dyslexicFont: 'גופן דיסלקסיה',
+    muteMascot: 'השתק ינשוף',
+    language: 'שפה',
+    dailyGoal: 'יעד יומי',
+    quests: 'משימות',
+    notifications: 'התראות',
+    back: 'חזרה',
+    next: 'הבא',
+    correct: 'נכון! ✅',
+    wrong: 'לא נכון ❌',
+    tryAgain: 'נסה שוב',
+    wellDone: 'כל הכבוד! 🌟',
+    loading: 'טוען...',
+    myChildren: 'הילדים שלי',
+    weeklyReport: 'דוח שבועי',
+    progress: 'התקדמות',
+    encourage: 'שלח עידוד',
+    print: 'הדפסה',
+    focusMode: 'מצב מיקוד',
+    privacy: 'מדיניות פרטיות',
+    terms: 'תנאי שימוש',
+    buyNow: 'הצטרף עכשיו',
+    premium: 'פרמיום',
+    freeTier: 'חינמי',
+  },
+  en: {
+    home: 'Home',
+    lessons: 'Lessons',
+    achievements: 'Achievements',
+    shop: 'Shop',
+    league: 'League',
+    profile: 'Profile',
+    streak: 'Streak',
+    hearts: 'Hearts',
+    gems: 'Gems',
+    xp: 'XP',
+    settings: 'Settings',
+    logout: 'Logout',
+    darkMode: 'Dark Mode',
+    dyslexicFont: 'Dyslexia Font',
+    muteMascot: 'Mute Owl',
+    language: 'Language',
+    dailyGoal: 'Daily Goal',
+    quests: 'Quests',
+    notifications: 'Notifications',
+    back: 'Back',
+    next: 'Next',
+    correct: 'Correct! ✅',
+    wrong: 'Wrong ❌',
+    tryAgain: 'Try Again',
+    wellDone: 'Well Done! 🌟',
+    loading: 'Loading...',
+    myChildren: 'My Children',
+    weeklyReport: 'Weekly Report',
+    progress: 'Progress',
+    encourage: 'Send Encouragement',
+    print: 'Print',
+    focusMode: 'Focus Mode',
+    privacy: 'Privacy Policy',
+    terms: 'Terms of Service',
+    buyNow: 'Subscribe Now',
+    premium: 'Premium',
+    freeTier: 'Free',
+  },
+};
+
+export function t(key: TranslationKey, locale: Locale): string {
+  return TRANSLATIONS[locale]?.[key] ?? TRANSLATIONS.ar[key] ?? key;
+}
+
+export function useT(locale: Locale) {
+  return (key: TranslationKey) => t(key, locale);
+}

@@ -15,6 +15,7 @@ import { extname } from 'path';
 import * as fs from 'fs';
 import { WhisperService } from './whisper.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PremiumGuard } from '../auth/guards/premium.guard';
 
 const audioStorage = diskStorage({
   destination: './uploads/audio',
@@ -25,7 +26,7 @@ const audioStorage = diskStorage({
 });
 
 @Controller('whisper')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PremiumGuard)
 export class WhisperController {
   private readonly logger = new Logger(WhisperController.name);
 

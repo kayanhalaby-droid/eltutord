@@ -1,6 +1,7 @@
-﻿import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../redis/redis.service';
+import { GamificationConfig } from '../../config/gamification.config';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -9,6 +10,7 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 
 const TZ = 'Asia/Jerusalem';
+const MILESTONES = [7, 30, 100, 365];
 
 @Injectable()
 export class StreaksService {
@@ -26,7 +28,12 @@ export class StreaksService {
     return dayjs().tz(TZ).format('YYYY-MM-DD');
   }
 
-  async recordActivity(userId: string): Promise<{ currentStreak: number; longestStreak: number; streakMaintained: boolean }> {
+  async recordActivity(userId: string): Promise<{
+    currentStreak: number;
+    longestStreak: number;
+    streakMaintained: boolean;
+    milestone?: number;
+  }> {
     const user = await this.prisma.user.findUniqueOrThrow({
       where: { id: userId },
       select: { currentStreak: true, longestStreak: true, lastActivityDate: true, streakFreezes: true },
@@ -87,7 +94,14 @@ export class StreaksService {
     await this.redis.set(this.streakKey(userId), String(updated.currentStreak));
     await this.redis.set(this.activityKey(userId), todayStr);
 
-    return { currentStreak: updated.currentStreak, longestStreak: updated.longestStreak, streakMaintained: maintained };
+    const milestone = MILESTONES.includes(updated.currentStreak) ? updated.currentStreak : undefined;
+
+    return {
+      currentStreak: updated.currentStreak,
+      longestStreak: updated.longestStreak,
+      streakMaintained: maintained,
+      milestone,
+    };
   }
 
   async getStreak(userId: string): Promise<number> {
@@ -100,5 +114,20 @@ export class StreaksService {
     });
     await this.redis.set(this.streakKey(userId), String(user.currentStreak));
     return user.currentStreak;
+  }
+
+  async addStreakFreeze(userId: string): Promise<void> {
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { streakFreezes: true },
+    });
+    const maxFreezes = GamificationConfig.streaks.maxFreezes;
+    if (user.streakFreezes >= maxFreezes) {
+      throw new BadRequestException(`لديك بالفعل الحد الأقصى من التجميدات (${maxFreezes})`);
+    }
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { streakFreezes: { increment: 1 } },
+    });
   }
 }

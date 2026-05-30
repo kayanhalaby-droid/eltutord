@@ -8,6 +8,9 @@ import { useAuthStore } from '@/store/auth';
 import { apiFetch } from '@/lib/api';
 import NoorOwl from '@/components/NoorOwl';
 import { Button } from '@/components/ui/button';
+import { Fireworks } from '@/components/effects/Fireworks';
+import { StarFall } from '@/components/effects/StarFall';
+import { useRewardEffect } from '@/lib/hooks/useRewardEffect';
 
 const REFLECTION_OPTIONS = [
   { id: 'confident',    label: 'أفهم الموضوع جيداً',       emoji: '😊' },
@@ -44,6 +47,7 @@ export default function LessonComplete({ lessonTitle, xpEarned, gemsEarned = 0, 
   const [phase, setPhase] = useState<'reflection' | 'results'>('reflection');
   const [reflection, setReflection] = useState<string | null>(null);
   const accuracy = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
+  const { fireworksActive, starFallActive, triggerFireworks, triggerStarFall } = useRewardEffect();
   const wrong = totalQuestions - correctAnswers;
 
   const { data: streakData } = useQuery<{ streak: number }>({
@@ -73,6 +77,8 @@ export default function LessonComplete({ lessonTitle, xpEarned, gemsEarned = 0, 
         }
       }
     }).catch(() => {});
+    if (accuracy === 100) triggerFireworks();
+    else if (accuracy >= 90) triggerStarFall();
   }, []);
 
   const owlExpr = accuracy >= 90 ? 'celebrating' : accuracy >= 70 ? 'happy' : 'encouraging';
@@ -89,6 +95,9 @@ export default function LessonComplete({ lessonTitle, xpEarned, gemsEarned = 0, 
   };
 
   return (
+    <>
+    <Fireworks active={fireworksActive} />
+    <StarFall active={starFallActive} />
     <motion.div
       className="fixed inset-0 z-50 flex flex-col items-center justify-center p-4"
       style={{ background: 'linear-gradient(160deg, #1A1F5E 0%, #2D3580 60%, #1565C0 100%)' }}
@@ -225,5 +234,6 @@ export default function LessonComplete({ lessonTitle, xpEarned, gemsEarned = 0, 
 
       </AnimatePresence>
     </motion.div>
+    </>
   );
 }

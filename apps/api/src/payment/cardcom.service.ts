@@ -1,4 +1,5 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -149,5 +150,26 @@ export class CardcomService {
 
   async getSubscription(userId: string) {
     return this.prisma.subscription.findUnique({ where: { userId } });
+  }
+
+  async getSubscriptionStatus(userId: string): Promise<{ active: boolean; plan: string | null; expiresAt: Date | null }> {
+    const sub = await this.prisma.subscription.findUnique({ where: { userId } });
+    const active = !!sub && sub.status === SubStatus.ACTIVE && sub.expiresAt > new Date();
+    return {
+      active,
+      plan: active ? sub!.plan : null,
+      expiresAt: active ? sub!.expiresAt : null,
+    };
+  }
+
+  @Cron(CronExpression.EVERY_HOUR)
+  async checkAndDowngradeExpiredSubscriptions(): Promise<void> {
+    const result = await this.prisma.subscription.updateMany({
+      where: { status: SubStatus.ACTIVE, expiresAt: { lt: new Date() } },
+      data: { status: SubStatus.EXPIRED },
+    });
+    if (result.count > 0) {
+      this.logger.log(`Expired ${result.count} subscription(s)`);
+    }
   }
 }

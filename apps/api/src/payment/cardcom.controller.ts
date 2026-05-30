@@ -69,4 +69,12 @@ export class CardcomController {
   getSubscription(@Req() req: AuthRequest) {
     return this.cardcomService.getSubscription(req.user.id);
   }
+
+  @Get('subscription/status')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'فحص سريع للاشتراك النشط' })
+  getSubscriptionStatus(@Req() req: AuthRequest) {
+    return this.cardcomService.getSubscriptionStatus(req.user.id);
+  }
 }

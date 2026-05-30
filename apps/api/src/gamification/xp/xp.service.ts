@@ -23,6 +23,7 @@ export class XpService {
   private totalXpKey = (id: string) => `user:${id}:total_xp`;
   private weeklyXpKey = (id: string) => `user:${id}:weekly_xp`;
   private levelKey = (id: string) => `user:${id}:level`;
+  private xpBoostKey = (id: string) => `user:${id}:xp_boost_expiry`;
 
   private calculateLevel(totalXp: number): number {
     const curve = GamificationConfig.xp.levelingCurve;
@@ -32,11 +33,26 @@ export class XpService {
     return 1;
   }
 
+  async getXpMultiplier(userId: string): Promise<number> {
+    const expiry = await this.redis.get(this.xpBoostKey(userId));
+    if (expiry && parseInt(expiry, 10) > Date.now()) return 2;
+    return 1;
+  }
+
+  // Buying a second XP boost resets the 1-hour timer (does not stack beyond 2×).
+  async activateXpBoost(userId: string, durationMinutes: number): Promise<void> {
+    const expiryTime = Date.now() + durationMinutes * 60 * 1000;
+    await this.redis.set(this.xpBoostKey(userId), String(expiryTime), 'EX', durationMinutes * 60);
+  }
+
   async awardXp(userId: string, xpAmount: number): Promise<{ totalXp: number; weeklyXp: number; level: number; levelUp: boolean }> {
     if (xpAmount <= 0) {
       const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { totalXp: true, weeklyXp: true, level: true } });
       return { ...user, levelUp: false };
     }
+
+    const multiplier = await this.getXpMultiplier(userId);
+    xpAmount = xpAmount * multiplier;
 
     const user = await this.prisma.user.findUniqueOrThrow({
       where: { id: userId },

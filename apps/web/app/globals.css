@@ -3,6 +3,44 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── OpenDyslexic font (dyslexia-friendly) ────────────────────────────────── */
+@font-face {
+  font-family: 'OpenDyslexic';
+  src: url('https://cdn.jsdelivr.net/npm/open-dyslexic@1.0.3/OpenDyslexic-Regular.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+.font-opendyslexic,
+.font-opendyslexic * {
+  font-family: 'OpenDyslexic', 'Cairo', sans-serif !important;
+  letter-spacing: 0.05em;
+  word-spacing: 0.15em;
+  line-height: 1.9;
+}
+
+/* ── Dark mode CSS variables ──────────────────────────────────────────────── */
+@layer base {
+  .dark {
+    --background: 234 70% 10%;    /* #0C0F3A deep dark blue */
+    --foreground: 0 0% 95%;
+    --card: 234 60% 14%;
+    --card-foreground: 0 0% 95%;
+    --primary: 48 100% 50%;       /* gold on dark */
+    --primary-foreground: 234 70% 10%;
+    --secondary: 234 40% 20%;
+    --secondary-foreground: 0 0% 90%;
+    --muted: 234 30% 18%;
+    --muted-foreground: 234 15% 65%;
+    --accent: 48 100% 50%;
+    --accent-foreground: 234 70% 10%;
+    --border: 234 30% 22%;
+    --input: 234 30% 22%;
+    --ring: 48 100% 50%;
+  }
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

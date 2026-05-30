@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { useAuthStore } from '@/store/auth';
 import { apiFetch } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { buildRegisterPayload } from '@/lib/utm';
 
 const schema = z
   .object({
@@ -58,16 +59,17 @@ export default function RegisterPage() {
   const onSubmit = async (values: FormValues) => {
     setError('');
     try {
+      const payload = buildRegisterPayload({
+        firstName: values.firstName,
+        lastName: values.lastName,
+        phone: values.phone,
+        password: values.password,
+        role: values.role,
+        gradeLevel: values.gradeLevel,
+      });
       const data = await apiFetch<{ access_token: string; user: any }>('/auth/register', {
         method: 'POST',
-        body: JSON.stringify({
-          firstName: values.firstName,
-          lastName: values.lastName,
-          phone: values.phone,
-          password: values.password,
-          role: values.role,
-          gradeLevel: values.gradeLevel,
-        }),
+        body: JSON.stringify(payload),
       });
       setAuth(data.access_token, data.user);
       router.replace(data.user.role === 'PARENT' ? '/parent' : '/home');

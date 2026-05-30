@@ -5,9 +5,10 @@ import { LearningPathModule } from '../learning-path/learning-path.module';
 import { ImageGeneratorService } from './image-generator.service';
 import { AdaptiveDifficultyService } from './adaptive-difficulty.service';
 import { DailyContentService } from './daily-content.service';
+import { QuestsModule } from '../gamification/quests/quests.module';
 
 @Module({
-  imports: [LearningPathModule],
+  imports: [LearningPathModule, QuestsModule],
   controllers: [CurriculumController],
   providers: [CurriculumService, ImageGeneratorService, AdaptiveDifficultyService, DailyContentService],
   exports: [CurriculumService, ImageGeneratorService, AdaptiveDifficultyService, DailyContentService],

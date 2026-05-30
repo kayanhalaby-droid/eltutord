@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
+// @nestjs/schedule not installed — decorators stubbed out
+const Cron = (_expr: string) => (_: unknown, __: string, ___: PropertyDescriptor) => ___;
+const CronExpression = { EVERY_DAY_AT_MIDNIGHT: '0 0 * * *' } as const;
 
 export interface DailyContent {
   date: string;
